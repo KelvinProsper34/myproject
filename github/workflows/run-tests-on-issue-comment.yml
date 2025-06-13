@@ -1,0 +1,43 @@
+name: Run Tests from Issue Comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-tests:
+    if: github.event.comment.body == '/run-tests'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write  # required to post a comment
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Run Android Unit Tests
+        run: ./gradlew test
+
+      - name: Upload test results (JUnit XML)
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-test-results
+          path: app/build/test-results/
+
+      - name: Comment back on the issue
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ✅ Android tests were triggered from your `/run-tests` comment.
+            📄 [View detailed logs here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
